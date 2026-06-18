@@ -16,6 +16,8 @@ let fetchPromise: Promise<NewsItem[]> | null = null;
 
 const mockVideos: NewsItem[] = [
   { id: 'live-1', title: 'NHK WORLD-JAPAN News Live', pubDate: new Date().toISOString(), link: 'https://www3.nhk.or.jp/news/', source: 'NHK WORLD-JAPAN', videoUrl: 'https://media-tyo.hls.nhkworld.jp/hls/w/live/master.m3u8' },
+  { id: 'live-12', title: 'NHK ニュース・防災ライブ', pubDate: new Date().toISOString(), link: 'https://www3.nhk.or.jp/news/', source: 'NHK', videoUrl: 'https://newssimul-stream.nhk.jp/hls/live/2010561/nhknewssimul/master.m3u8' },
+  { id: 'live-13', title: 'ウェザーニュースLiVE', pubDate: new Date().toISOString(), link: 'https://weathernews.jp/wnl/', source: 'ウェザーニュース', videoUrl: 'https://rch01e-alive-hls.akamaized.net/38fb45b25cdb05a1/out/v1/4e907bfabc684a1dae10df8431a84d21/index.m3u8' },
   { id: 'live-2', title: 'BBC News Live', pubDate: new Date().toISOString(), link: 'https://www.bbc.com/news', source: 'BBC News', videoUrl: 'https://vs-hls-push-ww-live.akamaized.net/x=4/i=urn:bbc:pips:service:bbc_news_channel_hd/mobile_wifi_main_sd_abr_v2.m3u8' },
   { id: 'live-3', title: 'DW News Live', pubDate: new Date().toISOString(), link: 'https://www.dw.com/en/live-tv/channel-english', source: 'DW', videoUrl: 'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/master.m3u8' },
   { id: 'live-4', title: 'FRANCE 24 English Live', pubDate: new Date().toISOString(), link: 'https://www.france24.com/en/live', source: 'FRANCE 24', videoUrl: 'https://live.france24.com/hls/live/2037218/F24_EN_HI_HLS/master_5000.m3u8' },
