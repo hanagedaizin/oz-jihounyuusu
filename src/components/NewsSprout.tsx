@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Html, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import type { NewsItem } from '../utils/newsFeed';
+import { getPlayableVideoUrl } from '../utils/newsFeed';
 
 interface NewsSproutProps {
   news: NewsItem;
@@ -23,12 +24,14 @@ const NewsSprout: React.FC<NewsSproutProps> = ({
   const [currentEndPos, setCurrentEndPos] = useState(() => new THREE.Vector3());
 
   const colors = useMemo(() => {
-    // Deterministic hash-based color to satisfy linter
     let hash = 0;
     for (let i = 0; i < news.id.length; i++) hash = news.id.charCodeAt(i) + ((hash << 5) - hash);
     const hue = hash % 360;
     return { bg: `hsl(${hue}, 75%, 85%)`, border: `hsl(${hue}, 65%, 55%)` };
   }, [news.id]);
+
+  const videoSrc = useMemo(() => news.videoUrl ? getPlayableVideoUrl(news.videoUrl) : '', [news.videoUrl]);
+  const isHls = videoSrc.toLowerCase().includes('.m3u8');
 
   const startPos = useMemo(() => {
     const phi = (90 - lat) * (Math.PI / 180);
@@ -65,8 +68,20 @@ const NewsSprout: React.FC<NewsSproutProps> = ({
   });
 
   const handleClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+    e.stopPropagation();
     onSelect(news, currentEndPos.clone());
+  }, [news, onSelect, currentEndPos]);
+
+  const handleIframeClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(news, currentEndPos.clone());
+  }, [news, onSelect, currentEndPos]);
+
+  const handleIframeKeydown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onSelect(news, currentEndPos.clone());
+    }
   }, [news, onSelect, currentEndPos]);
 
   return (
@@ -76,21 +91,46 @@ const NewsSprout: React.FC<NewsSproutProps> = ({
       )}
       {progress === 1 && (
         <Html position={currentEndPos} zIndexRange={[100, 0]} center>
-          <a href={news.link} target="_blank" rel="noopener noreferrer" className="news-sphere-container" onClick={handleClick} style={{ background: colors.bg, borderColor: colors.border }}>
+          <div 
+            className="news-sphere-container" 
+            style={{ 
+              background: colors.bg,
+              borderColor: colors.border,
+              cursor: 'pointer'
+            }}
+            onClick={handleClick}
+          >
             {news.videoUrl ? (
-              <>
-                <div className="news-sphere-video">
-                  <iframe src={news.videoUrl} frameBorder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                </div>
-                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', background: 'rgba(0, 0, 0, 0.65)', color: '#fff', fontSize: '0.55rem', fontWeight: 'bold', textAlign: 'center', padding: '5px 8px', boxSizing: 'border-box', zIndex: 10, pointerEvents: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>🔴 {news.source} LIVE</div>
-              </>
+              <div className="news-sphere-video" onClick={handleIframeClick}>
+                {isHls ? (
+                  <video 
+                    src={videoSrc} 
+                    autoPlay 
+                    muted 
+                    playsInline 
+                    style={{ width: '100%', height: '100%', border: 'none', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <iframe 
+                    src={videoSrc} 
+                    frameBorder="0" 
+                    style={{ width: '150%', height: '150%', border: 'none', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    title={news.title}
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                )}
+                <button className="news-sphere-video-hitbox" type="button" aria-label="動画を開く" onClick={handleIframeClick} onKeyDown={handleIframeKeydown} />
+                <div className="news-sphere-live">LIVE</div>
+              </div>
             ) : (
               <>
                 <div className="news-sphere-title">{news.title}</div>
                 <div className="news-sphere-source" style={{ color: colors.border }}>{news.source}</div>
               </>
             )}
-          </a>
+          </div>
         </Html>
       )}
     </group>

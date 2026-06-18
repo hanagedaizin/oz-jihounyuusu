@@ -1,10 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import OzScene from './components/OzScene';
 import UI from './components/UI';
+import { getPlayableVideoUrl } from './utils/newsFeed';
 import type { NewsItem } from './utils/newsFeed';
 
 interface CameraControllerProps {
@@ -53,6 +54,9 @@ interface ContentDisplayProps {
 }
 
 function ContentDisplay({ news, position, onClose }: ContentDisplayProps) {
+  const playableVideoUrl = useMemo(() => news.videoUrl ? getPlayableVideoUrl(news.videoUrl) : '', [news.videoUrl]);
+  const isHls = playableVideoUrl.toLowerCase().includes('.m3u8');
+
   return (
     <Html position={position} center style={{ width: '500px', maxHeight: '400px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.5)', pointerEvents: 'auto' }}>
       <div style={{ position: 'relative' }}>
@@ -60,10 +64,14 @@ function ContentDisplay({ news, position, onClose }: ContentDisplayProps) {
         <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#666' }}><span style={{ fontWeight: 'bold', color: '#FE81DC' }}>{news.source}</span><span style={{ marginLeft: '0.5rem' }}>{new Date(news.pubDate).toLocaleString('ja-JP')}</span></div>
         <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#111' }}>{news.title}</h3>
         {news.videoUrl ? (
-          <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
-            <iframe src={news.videoUrl} style={{ width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-          </div>
-        ) : (
+           <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+             {isHls ? (
+               <video src={playableVideoUrl} autoPlay muted controls playsInline style={{ width: '100%', height: '100%', display: 'block', background: '#000' }} />
+             ) : (
+               <iframe src={playableVideoUrl} style={{ width: '100%', height: '100%', border: 'none' }} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen title={news.title} referrerPolicy="strict-origin-when-cross-origin" />
+             )}
+           </div>
+         ) : (
           <div style={{ padding: '1rem', background: 'rgba(0, 0, 0, 0.05)', borderRadius: '12px' }}>
             <p style={{ margin: '0 0 1rem 0', color: '#555', fontSize: '0.9rem' }}>このニュース記事は外部サイトで全文をお読みいただけます。</p>
             <a href={news.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: '#FE81DC', color: '#fff', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem', padding: '0.5rem 1rem', borderRadius: '20px' }}>記事元サイトを開く →</a>
