@@ -98,9 +98,9 @@ const Clock: React.FC = () => {
   return (
     <group position={[0, 0, 4.2]}>
       <Html center zIndexRange={[50, 0]}>
-        <div style={{
+        <div className="clock-text" style={{
           fontFamily: "'Courier New', Courier, monospace",
-          fontSize: '4rem',
+          fontSize: 'var(--clock-font-size)',
           fontWeight: 'bold',
           color: '#FE81DC',
           textShadow: '0 0 10px rgba(254, 129, 220, 0.8), 0 0 20px rgba(254, 129, 220, 0.5)',

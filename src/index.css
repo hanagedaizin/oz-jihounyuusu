@@ -28,7 +28,9 @@ body {
 }
 
 .clock-text {
+  --clock-font-size: 4rem;
   font-family: 'Courier New', Courier, monospace;
+  font-size: var(--clock-font-size);
   font-weight: bold;
   text-shadow: 0 0 10px rgba(254, 129, 220, 0.8), 0 0 20px rgba(254, 129, 220, 0.5);
 }
@@ -178,4 +180,60 @@ input[type="range"] {
   letter-spacing: 0.08em;
   padding: 4px 8px;
   pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .clock-text {
+    --clock-font-size: 2.35rem;
+  }
+
+  .ui-overlay {
+    padding: 1rem;
+  }
+
+  .ui-controls {
+    width: min(260px, calc(100vw - 2rem));
+    padding: 0.9rem;
+  }
+
+  .ui-title {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .slider-label {
+    font-size: 0.8rem;
+  }
+
+  .news-sphere-container {
+    width: 96px;
+    height: 96px;
+    padding: 9px;
+    border-width: 2px;
+  }
+
+  .news-sphere-container:hover {
+    transform: scale(1.08);
+  }
+
+  .news-sphere-title {
+    font-size: 0.5rem;
+    -webkit-line-clamp: 3;
+  }
+
+  .news-sphere-source {
+    font-size: 0.4rem;
+  }
+
+  .news-sphere-video iframe {
+    width: 160%;
+    height: 160%;
+  }
+
+  .news-sphere-live {
+    left: 6px;
+    bottom: 6px;
+    font-size: 0.42rem;
+    padding: 3px 6px;
+  }
 }

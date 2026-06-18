@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, type CSSProperties } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html } from '@react-three/drei';
 import { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
@@ -12,13 +12,13 @@ interface CameraControllerProps {
   targetPos: THREE.Vector3 | null;
   active: boolean;
   zoomProgress: number;
+  defaultCamPos: THREE.Vector3;
   controlsRef: React.RefObject<OrbitControlsImpl | null>;
 }
 
-const DEFAULT_CAM_POS = new THREE.Vector3(0, 0, 15);
 const DEFAULT_LOOK_AT = new THREE.Vector3(0, 0, 0);
 
-function CameraController({ targetPos, active, zoomProgress, controlsRef }: CameraControllerProps) {
+function CameraController({ targetPos, active, zoomProgress, defaultCamPos, controlsRef }: CameraControllerProps) {
   const { camera } = useThree();
   const lerpFactor = 0.04;
 
@@ -27,7 +27,7 @@ function CameraController({ targetPos, active, zoomProgress, controlsRef }: Came
       const dir = targetPos.clone().normalize();
       const zoomDistance = 0.8;
       const camTarget = targetPos.clone().add(dir.multiplyScalar(zoomDistance));
-      const smoothedTarget = new THREE.Vector3().lerpVectors(DEFAULT_CAM_POS, camTarget, zoomProgress);
+      const smoothedTarget = new THREE.Vector3().lerpVectors(defaultCamPos, camTarget, zoomProgress);
       camera.position.lerp(smoothedTarget, lerpFactor);
       if (controlsRef.current) {
         const currentTarget = controlsRef.current.target as unknown as THREE.Vector3;
@@ -36,7 +36,7 @@ function CameraController({ targetPos, active, zoomProgress, controlsRef }: Came
         controlsRef.current.update();
       }
     } else if (!active) {
-      camera.position.lerp(DEFAULT_CAM_POS, lerpFactor);
+      camera.position.lerp(defaultCamPos, lerpFactor);
       if (controlsRef.current) {
         const currentTarget = controlsRef.current.target as unknown as THREE.Vector3;
         currentTarget.lerp(DEFAULT_LOOK_AT, lerpFactor);
@@ -50,15 +50,27 @@ function CameraController({ targetPos, active, zoomProgress, controlsRef }: Came
 interface ContentDisplayProps {
   news: NewsItem;
   position: THREE.Vector3;
+  isMobileViewport: boolean;
   onClose: () => void;
 }
 
-function ContentDisplay({ news, position, onClose }: ContentDisplayProps) {
+function ContentDisplay({ news, position, isMobileViewport, onClose }: ContentDisplayProps) {
   const playableVideoUrl = useMemo(() => news.videoUrl ? getPlayableVideoUrl(news.videoUrl) : '', [news.videoUrl]);
   const isHls = playableVideoUrl.toLowerCase().includes('.m3u8');
+  const modalStyle = useMemo<CSSProperties>(() => ({
+    width: isMobileViewport ? 'min(88vw, 360px)' : '500px',
+    maxHeight: isMobileViewport ? 'min(72vh, 360px)' : '400px',
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    padding: isMobileViewport ? '1rem' : '1.5rem',
+    borderRadius: isMobileViewport ? '14px' : '16px',
+    boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
+    pointerEvents: 'auto',
+  }), [isMobileViewport]);
 
   return (
-    <Html position={position} center style={{ width: '500px', maxHeight: '400px', background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(20px)', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.5)', pointerEvents: 'auto' }}>
+    <Html position={position} center style={modalStyle}>
       <div style={{ position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#333', width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#666' }}><span style={{ fontWeight: 'bold', color: '#FE81DC' }}>{news.source}</span><span style={{ marginLeft: '0.5rem' }}>{new Date(news.pubDate).toLocaleString('ja-JP')}</span></div>
@@ -87,7 +99,24 @@ function App() {
   const [selectedNews, setSelectedNews] = useState<NewsItem | null>(null);
   const [selectedPos, setSelectedPos] = useState<THREE.Vector3 | null>(null);
   const [zoomProgress, setZoomProgress] = useState(0);
+  const [isMobileViewport, setIsMobileViewport] = useState(() => window.matchMedia('(max-width: 768px)').matches);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 768px)');
+    const updateMobileViewport = () => setIsMobileViewport(mediaQuery.matches);
+    updateMobileViewport();
+    mediaQuery.addEventListener('change', updateMobileViewport);
+    return () => mediaQuery.removeEventListener('change', updateMobileViewport);
+  }, []);
+
+  const defaultCamPos = useMemo(() => new THREE.Vector3(0, 0, isMobileViewport ? 22 : 15), [isMobileViewport]);
+  const cameraConfig = useMemo(() => ({
+    position: isMobileViewport ? [0, 0, 22] as const : [0, 0, 15] as const,
+    fov: isMobileViewport ? 60 : 45,
+    minDistance: isMobileViewport ? 14 : 8,
+    maxDistance: isMobileViewport ? 46 : 30,
+  }), [isMobileViewport]);
 
   useEffect(() => {
     if (selectedNews) {
@@ -123,16 +152,16 @@ function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <Canvas camera={{ position: [0, 0, 15], fov: 45 }}>
+      <Canvas key={isMobileViewport ? 'mobile' : 'desktop'} camera={{ position: cameraConfig.position, fov: cameraConfig.fov }}>
         <color attach="background" args={['#ffffff']} />
         <ambientLight intensity={2.5} />
         <directionalLight position={[10, 10, 10]} intensity={0.8} color="#ffffff" />
         <directionalLight position={[-5, -5, 5]} intensity={0.8} color="#ffffff" />
         <directionalLight position={[0, -10, 10]} intensity={0.5} color="#ffffff" />
         <OzScene newsLifespan={newsLifespan} onSelectNews={handleSelectNews} />
-        <CameraController targetPos={selectedPos} active={!!selectedNews} zoomProgress={zoomProgress} controlsRef={controlsRef} />
-        {selectedNews && selectedPos && <ContentDisplay news={selectedNews} position={selectedPos} onClose={handleCloseModal} />}
-        <OrbitControls ref={controlsRef} enablePan={false} minDistance={8} maxDistance={30} enabled={!selectedNews} />
+        <CameraController targetPos={selectedPos} active={!!selectedNews} zoomProgress={zoomProgress} defaultCamPos={defaultCamPos} controlsRef={controlsRef} />
+        {selectedNews && selectedPos && <ContentDisplay news={selectedNews} position={selectedPos} isMobileViewport={isMobileViewport} onClose={handleCloseModal} />}
+        <OrbitControls ref={controlsRef} enablePan={false} minDistance={cameraConfig.minDistance} maxDistance={cameraConfig.maxDistance} enabled={!selectedNews} />
       </Canvas>
       <UI newsLifespan={newsLifespan} setNewsLifespan={setNewsLifespan} />
     </div>
